@@ -9,8 +9,8 @@ FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git --exclude target' \
 	--color "border:#A15ABD" \
 	--header-first \
 	--header "CWD:$(pwd)
-[Alt-C]:(C)hange Dir; [RET]: select;
-TOOD: extended help information jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj
+[Alt-C]:Change Dir(TODO); [RET]: select;
+TOOD: extended help information
 ${HEADER_KEYBIND_HELP}
 " \
 	--preview 'bat -n --color=always {}' \

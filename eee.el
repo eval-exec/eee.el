@@ -10,10 +10,39 @@
 ;; Eval! Exec! Emacs!
 ;; Unite! all Emacs users worldwide!
 ;; Make Emacs Great Again!
+
+
+;; specify which terminal for ee-* commands to use. alacritty, or wezterm?
+(defcustom ee-terminal-command "wezterm"
+  "The terminal command to use for ee-* commands."
+  :type 'string
+  :group 'eee)
+
+(defun ee-options--wezterm()
+  (format "--config enable_wayland=false \
+--config enable_tab_bar=false \
+--config initial_cols=180 --config initial_rows=50 \
+--config window_decorations=\\\"NONE\\\" \
+" ))
+
+(defun ee-options--alacritty() 
+  (options "--option=window.decorations=\\'None\\' --option=window.dimensions.columns=180 --option=window.dimensions.lines=50")
+  (let* ((class "Emacs")
+		 (title "Emacs.ee-alacritty")
+		 (options "--option=window.decorations=\\'None\\' --option=window.dimensions.columns=180 --option=window.dimensions.lines=50"))
+	(format
+	 "--class=%s --title %s %s"
+	 class title options)))
+
+(defun ee-options()
+  ;; return corresponding options for  ee-terminal-command, alacritty or wezterm
+  (cond
+   ((string= ee-terminal-command "wezterm") (ee-options--wezterm))
+   ((string= ee-terminal-command "alacritty") (ee-options--alacritty))
+   (t (error "ee-terminal-command is not supported: %s" ee-terminal-command))))
+
 (defvar eee--load-file-path nil)
-
 (setq eee--load-file-path (or load-file-name buffer-file-name))
-
 
 (defun ee-script-path(script-name)
   ;; scirpt-name is in same dir with current el scirpt
@@ -27,14 +56,17 @@
 	(find-file (string-trim target-file))))
 
 
-(defun merge-options (options option)
-  "Prepend --OPTION to every string in OPTIONS and merge the result with spaces."
-  (mapconcat (lambda (opt) (concat "--" option " " opt)) options " "))
+(defun ee-get-project-dir-or-current-dir()
+  (let* ((project-dir-command
+		  (format  "git rev-parse --show-toplevel 2> /dev/null || echo -n %s" default-directory))
+		 (cwd (string-trim-right (shell-command-to-string project-dir-command) "\n")))
+	cwd))
+
 
 (defun ee-find--sentinel(process event)
   (cond
    ((string= event "finished\n")
-	(let* ((target-file (shell-command-to-string "cat /tmp/eee.tmp"))
+	(let* ((target-file (shell-command-to-string "cat /tmp/ee-find.tmp"))
 		   (target-file (string-trim target-file)))
 	  (when (not (string-empty-p target-file))
 		(message "ee-find opening: %s" target-file)
@@ -45,77 +77,26 @@
 	(message "ee-find: Event is not finished: %s" event)))
   )
 
-;; Eval Exec find file
+
+;; Eval Exec find file in project or current dir
 (defun ee-find()
   (interactive)
-  (let* ((class "Emacs")
-		 (title "Emacs.ee-find")
-		 (options "--option=window.decorations=\\'None\\' --option=window.dimensions.columns=180 --option=window.dimensions.lines=50")
-		 (working-directory (format  "$(git rev-parse --show-toplevel 2> /dev/null || echo %s)" default-directory))
+  (let* ((options (ee-options))
+		 (working-directory (ee-get-project-dir-or-current-dir))
 		 (command
-		  (shell-quote-argument
-		   (format "%s > /tmp/eee.tmp"
-				   (ee-script-path "eee-find.sh"))))
-		 (full-command (format
-						"alacritty --class=%s -T %s %s --working-directory=%s -e bash -c %s"
-						class
-						title
-						options
-						working-directory
-						command
-						))
+		  (format "%s > /tmp/ee-find.tmp"
+				  (ee-script-path "eee-find.sh")))
+		 (full-command (format "%s %s -e bash -c 'cd %s && %s'"
+							   ee-terminal-command
+							   options
+							   working-directory
+							   command))
 		 (ee-find-process
-		  (start-process-shell-command "ee-find" nil full-command)
-		  )
-		 )
-	(set-process-sentinel ee-find-process #'ee-find--sentinel)
-	))
+		  (start-process-shell-command "ee-find" nil full-command)))
+	;; (message "ee-find: %s" full-command)
+	(set-process-sentinel ee-find-process #'ee-find--sentinel)))
 
 
-
-
-(defvar ee-yazi-async-shell-command-buffer "*ee-yazi*")
-(add-to-list 'display-buffer-alist '(ee-yazi-async-shell-command-buffer display-buffer-no-window (nil)))
-
-(defun ee-yazi-wezterm-options()
-  (let* ((cwd-command
-		  (format  "git rev-parse --show-toplevel 2> /dev/null || echo -n %s" default-directory)
-		  )
-		 (cwd (string-trim-right (shell-command-to-string cwd-command) "\n"))
-		 )
-
-	(format "--config enable_wayland=false \
---config enable_tab_bar=false \
---config initial_cols=180 --config initial_rows=50 \
---config window_decorations=\\\"NONE\\\" \
---config default_cwd=\\\"%s\\\" \
-" cwd)
-	)
-  )
-
-(defun ee-yazi-alacritty-options() 
-  (let* ((class "Emacs")
-		 (title "Emacs.ee-yazi")
-		 (options
-		  "--option=window.decorations=\\'None\\' --option=window.dimensions.columns=180 --option=window.dimensions.lines=50")
-		 (working-directory (format  "$(git rev-parse --show-toplevel 2> /dev/null || echo %s)" default-directory))
-		 (format
-		  "--class=%s -T %s %s --working-directory=%s"
-		  class
-		  title
-		  options
-		  working-directory)
-
-		 (command
-		  (shell-quote-argument (ee-script-path "eee-yazi.sh")))
-		 (full-command (format
-						"wezterm --class=%s -T %s %s --working-directory=%s -e bash -c %s"
-						class
-						title
-						options
-						working-directory
-						command
-						)))))
 
 (defun ee-yazi--sentinel (process event)
   (cond
@@ -128,14 +109,15 @@
    (t
     (message "Event is not finished: %s " event))))
 
-;; Eval Exec 鸭子 yazi https://github.com/sxyazi/yazi
-(defun ee-yazi()
-  (interactive)
+;; Eval Exec 鸭子 yazi https://github.com/sxyazi/yazi in current dir
+(defun ee-yazi-in(dir)
   (let* ((command (ee-script-path "eee-yazi.sh"))
-		 (options (ee-yazi-wezterm-options))
+		 (options (ee-options))
 		 (full-command
-		  (format "wezterm %s -e bash -c %s"
+		  (format "%s %s -e bash -c 'cd %s && %s'"
+				  ee-terminal-command
 				  options
+				  dir
 				  command))
 		 (ee-yazi-process (start-process-shell-command "ee-yazi" nil full-command))
 		 )
@@ -143,6 +125,16 @@
 	(set-process-sentinel ee-yazi-process #'ee-yazi--sentinel)
 	))
 
+
+;; Eval Exec 鸭子 yazi in current dir
+(defun ee-yazi()
+  (interactive)
+  (ee-yazi-in default-directory))
+
+;; Eval Exec 鸭子 yazi in current project dir
+(defun ee-yazi-project()
+  (interactive)
+  (ee-yazi-in (ee-get-project-dir-or-current-dir)))
 
 
 (defun ee-find-file-at-line-and-column (string)
@@ -169,25 +161,19 @@
 
 (defun ee-rg()
   (interactive)
-  (let* ((class "emacs.alacritty")
-		 (title "emacs.alacritty.rg")
-		 (options "--option=window.decorations=\\'None\\' --option=window.dimensions.columns=180 --option=window.dimensions.lines=50")
-		 (working-directory (format  "$(git rev-parse --show-toplevel 2> /dev/null || echo %s)" default-directory))
-		 (command
-		  (shell-quote-argument
-		   (format "%s > /tmp/ee-rg.tmp"
-				   (ee-script-path "eee-rg.sh"))))
+  (let* ((options (ee-options))
+		 (working-directory (ee-get-project-dir-or-current-dir))
+		 (command (format "%s > /tmp/ee-rg.tmp"
+						  (ee-script-path "eee-rg.sh")))
 		 (full-command (format
-						"alacritty --class=%s -T %s %s --working-directory=%s -e bash -c %s"
-						class
-						title
+						"%s %s -e bash -c 'cd %s && %s'"
+						ee-terminal-command
 						options
 						working-directory
 						command))
 		 (ee-rg-process (start-process-shell-command "ee-rg" nil full-command))
 		 )
-	(set-process-sentinel ee-rg-process #'ee-rg-sentinel)
-	))
+	(set-process-sentinel ee-rg-process #'ee-rg-sentinel)))
 
 
 ;;; Eval Exec execute lazygit
@@ -232,8 +218,6 @@
 						   (buffer-file-name)))))
 		 (ee-line-process (start-process-shell-command "ee-line" nil full-command)))
 
-	(set-process-sentinel ee-line-process #'ee-line-sentinel)
-	)
-  )
+	(set-process-sentinel ee-line-process #'ee-line-sentinel)))
 
 (provide 'eee)
