@@ -178,7 +178,8 @@
   (let* ((command  (ee-script-path "eee-lazygit.sh"))
 		 (options (ee-get-teriminal-options))
 		 (full-command
-		  (format "wezterm %s -e bash -c %s"
+		  (format "%s %s -e bash -c %s"
+				  ee-terminal-command
 				  options
 				  command)))
 	;; (message "ee-lazygit: %s" full-command)
@@ -206,7 +207,8 @@
 		  (ee-script-path "eee-line.sh"))
 		 (options (ee-get-teriminal-options))
 		 (full-command
-		  (format "wezterm %s -e bash -c %s"
+		  (format "%s %s -e bash -c %s"
+				  ee-terminal-command
 				  options
 				  (shell-quote-argument
 				   (format "%s %s"
