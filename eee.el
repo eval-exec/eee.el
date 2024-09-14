@@ -18,34 +18,27 @@
   :type 'string
   :group 'eee)
 
-(defun ee-options--wezterm()
-  (format "--config enable_wayland=false \
---config enable_tab_bar=false \
---config initial_cols=180 --config initial_rows=50 \
---config window_decorations=\\\"NONE\\\" \
-" ))
+(defcustom ee-terminal-options
+  '(("wezterm" .
+	 "--config enable_wayland=false --config enable_tab_bar=false --config initial_cols=180 --config initial_rows=50 --config window_decorations=\\\"NONE\\\"")
+	("alacritty" .
+	 "--option=window.decorations=\\\"None\\\" --option=window.dimensions.columns=180 --option=window.dimensions.lines=50"))
+  "The terminal command options to use for ee-* commands."
+  :type 'alist
+  :group 'eee)
 
-(defun ee-options--alacritty() 
-  (options "--option=window.decorations=\\'None\\' --option=window.dimensions.columns=180 --option=window.dimensions.lines=50")
-  (let* ((class "Emacs")
-		 (title "Emacs.ee-alacritty")
-		 (options "--option=window.decorations=\\'None\\' --option=window.dimensions.columns=180 --option=window.dimensions.lines=50"))
-	(format
-	 "--class=%s --title %s %s"
-	 class title options)))
 
-(defun ee-options()
-  ;; return corresponding options for  ee-terminal-command, alacritty or wezterm
-  (cond
-   ((string= ee-terminal-command "wezterm") (ee-options--wezterm))
-   ((string= ee-terminal-command "alacritty") (ee-options--alacritty))
-   (t (error "ee-terminal-command is not supported: %s" ee-terminal-command))))
+(defun ee-get-teriminal-options()
+  (alist-get
+   ee-terminal-command
+   ee-terminal-options "" nil 'equal))
+
 
 (defvar eee--load-file-path nil)
 (setq eee--load-file-path (or load-file-name buffer-file-name))
 
 (defun ee-script-path(script-name)
-  ;; scirpt-name is in same dir with current el scirpt
+  ;; script-name is in same dir with current eee.el script
   (expand-file-name
    script-name
    (file-name-directory (expand-file-name eee--load-file-path))))
@@ -81,7 +74,7 @@
 ;; Eval Exec find file in project or current dir
 (defun ee-find()
   (interactive)
-  (let* ((options (ee-options))
+  (let* ((options (ee-get-teriminal-options))
 		 (working-directory (ee-get-project-dir-or-current-dir))
 		 (command
 		  (format "%s > /tmp/ee-find.tmp"
@@ -101,18 +94,18 @@
 (defun ee-yazi--sentinel (process event)
   (cond
    ((string= event "finished\n")
-    (let* ((target-file (shell-command-to-string "cat /tmp/ee-yazi.tmp"))
-           (target-file (string-trim target-file)))
+	(let* ((target-file (shell-command-to-string "cat /tmp/ee-yazi.tmp"))
+		   (target-file (string-trim target-file)))
 	  (when (not (string-empty-p target-file))
 		(message "ee-yazi opening: %s" target-file)
 		(ee-find-file target-file))))
    (t
-    (message "Event is not finished: %s " event))))
+	(message "Event is not finished: %s " event))))
 
 ;; Eval Exec 鸭子 yazi https://github.com/sxyazi/yazi in current dir
 (defun ee-yazi-in(dir)
   (let* ((command (ee-script-path "eee-yazi.sh"))
-		 (options (ee-options))
+		 (options (ee-get-options))
 		 (full-command
 		  (format "%s %s -e bash -c 'cd %s && %s'"
 				  ee-terminal-command
@@ -161,7 +154,7 @@
 
 (defun ee-rg()
   (interactive)
-  (let* ((options (ee-options))
+  (let* ((options (ee-get-teriminal-options))
 		 (working-directory (ee-get-project-dir-or-current-dir))
 		 (command (format "%s > /tmp/ee-rg.tmp"
 						  (ee-script-path "eee-rg.sh")))
