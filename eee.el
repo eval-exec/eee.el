@@ -12,7 +12,7 @@
 ;; Make Emacs Great Again!
 
 
-;; specify which terminal for ee-* commands to use. alacritty, or wezterm?
+;; specify which terminal for ee-* commands to use. alacritty, wezterm, kitty, or konsole?
 (defcustom ee-terminal-command "wezterm"
   "The terminal command to use for ee-* commands."
   :type 'string
@@ -22,7 +22,10 @@
   '(("wezterm" .
 	 "--config enable_wayland=false --config enable_tab_bar=false --config initial_cols=180 --config initial_rows=50 --config window_decorations=\\\"NONE\\\"")
 	("alacritty" .
-	 "--option=window.decorations=\\\"None\\\" --option=window.dimensions.columns=180 --option=window.dimensions.lines=50"))
+	 "--option=window.decorations=\\\"None\\\" --option=window.dimensions.columns=180 --option=window.dimensions.lines=50")
+	("kitty" . "--title ee-kitty")
+	("konsole" . "--hide-menubar")
+	)
   "The terminal command options to use for ee-* commands."
   :type 'alist
   :group 'eee)
@@ -105,7 +108,7 @@
 ;; Eval Exec 鸭子 yazi https://github.com/sxyazi/yazi in current dir
 (defun ee-yazi-in(dir)
   (let* ((command (ee-script-path "eee-yazi.sh"))
-		 (options (ee-get-options))
+		 (options (ee-get-teriminal-options))
 		 (full-command
 		  (format "%s %s -e bash -c 'cd %s && %s'"
 				  ee-terminal-command
@@ -173,7 +176,7 @@
 (defun ee-lazygit()
   (interactive)
   (let* ((command  (ee-script-path "eee-lazygit.sh"))
-		 (options (ee-yazi-wezterm-options))
+		 (options (ee-get-teriminal-options))
 		 (full-command
 		  (format "wezterm %s -e bash -c %s"
 				  options
@@ -201,7 +204,7 @@
   (interactive)
   (let* ((command
 		  (ee-script-path "eee-line.sh"))
-		 (options (ee-yazi-wezterm-options))
+		 (options (ee-get-teriminal-options))
 		 (full-command
 		  (format "wezterm %s -e bash -c %s"
 				  options
