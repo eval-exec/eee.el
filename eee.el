@@ -67,6 +67,7 @@ See `ee-start-terminal-function' for the usage.
   "Function used to start the terminal.
 See `ee-start-external-terminal' for function signature."
   :type '(choice (const :tag "External terminal" ee-start-external-terminal)
+		 (const :tag "Eat" ee-eat-start-terminal)
 		 (function "Custom function")))
 
 (defun ee-start-process-shell-command-in-terminal (name command callback)
