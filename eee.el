@@ -31,7 +31,7 @@
   :group 'eee)
 
 
-(defun ee-get-teriminal-options()
+(defun ee-get-terminal-options()
   (alist-get
    ee-terminal-command
    ee-terminal-options "" nil 'equal))
@@ -77,7 +77,7 @@
 ;; Eval Exec find file in project or current dir
 (defun ee-find()
   (interactive)
-  (let* ((options (ee-get-teriminal-options))
+  (let* ((options (ee-get-terminal-options))
 		 (working-directory (ee-get-project-dir-or-current-dir))
 		 (command
 		  (format "%s > /tmp/ee-find.tmp"
@@ -108,7 +108,7 @@
 ;; Eval Exec 鸭子 yazi https://github.com/sxyazi/yazi in current dir
 (defun ee-yazi-in(dir)
   (let* ((command (ee-script-path "eee-yazi.sh"))
-		 (options (ee-get-teriminal-options))
+		 (options (ee-get-terminal-options))
 		 (full-command
 		  (format "%s %s -e bash -c 'cd %s && %s'"
 				  ee-terminal-command
@@ -157,7 +157,7 @@
 
 (defun ee-rg()
   (interactive)
-  (let* ((options (ee-get-teriminal-options))
+  (let* ((options (ee-get-terminal-options))
 		 (working-directory (ee-get-project-dir-or-current-dir))
 		 (command (format "%s > /tmp/ee-rg.tmp"
 						  (ee-script-path "eee-rg.sh")))
@@ -176,7 +176,7 @@
 (defun ee-lazygit()
   (interactive)
   (let* ((command  (ee-script-path "eee-lazygit.sh"))
-		 (options (ee-get-teriminal-options))
+		 (options (ee-get-terminal-options))
 		 (full-command
 		  (format "%s %s -e bash -c %s"
 				  ee-terminal-command
@@ -205,7 +205,7 @@
   (interactive)
   (let* ((command
 		  (ee-script-path "eee-line.sh"))
-		 (options (ee-get-teriminal-options))
+		 (options (ee-get-terminal-options))
 		 (full-command
 		  (format "%s %s -e bash -c %s"
 				  ee-terminal-command
