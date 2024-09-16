@@ -113,6 +113,27 @@ NAME is passed to `ee-start-terminal-function'."
     (ee-start-process-shell-command-in-terminal "ee-find" command #'ee-find--callback)))
 
 
+(defun ee-lf--callback (process)
+  (let* ((target-file (shell-command-to-string "cat /tmp/ee-lf.tmp"))
+         (target-file (string-split target-file "\n" t)))
+    (dolist (file target-file)
+      (when (not (string-empty-p file))
+        (message "ee-lf-opening: %s" file)
+        (ee-find-file file)))))
+
+(defun ee-lf-in (dir)
+  (let* ((command (ee-script-path "eee-lf.sh"))
+         (full-command (format "cd %s && %s" dir command)))
+    (ee-start-process-shell-command-in-terminal
+     "ee-lf" full-command #'ee-lf--callback)))
+
+(defun ee-lf ()
+  (interactive)
+  (ee-lf-in default-directory))
+
+(defun ee-lf-project ()
+  (interactive)
+  (ee-lf-in (ee-get-project-dir-or-current-dir)))
 (defun ee-yazi--callback (process)
   (let* ((target-file (shell-command-to-string "cat /tmp/ee-yazi.tmp"))
 	 (target-file (string-trim target-file)))
