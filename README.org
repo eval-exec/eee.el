@@ -12,22 +12,48 @@ ee.el Support:
 
 [[https://github.com/user-attachments/assets/9298b2be-1ccb-4696-8569-672fac660f22][preview]]
 
-#+begin_src elisp
-    (use-package eee
-      :load-path "~/Projects/github.com/eval-exec/eee.el/"
-      :config
-      
-      ;; Should have wezterm or alacritty installed, more terminal application is supporting...
-  	;; Issues and pull requests are welcome
-      (setq ee-terminal-command "wezterm")
+** Installation
 
-      (global-definer "f" 'ee-find)
-      (global-definer "g" 'ee-lazygit)
-      (global-definer "y" 'ee-yazi-project)
-      (general-def "C-x C-f" 'ee-yazi)
-      (general-def "C-S-f" 'ee-rg)
-      (general-evil-define-key 'normal 'global "M-f" 'ee-line)
-      )
+*** Elpaca
+#+begin_src elisp
+(use-package eee
+  :ensure (:type git :host github :repo "eval-exec/eee.el"
+                 :files (:defaults "*.el" "*.sh")))
+#+end_src
+
+*** Straight
+#+begin_src elisp
+(use-package eee
+  :ensure '(:type git :host github :repo "eval-exec/eee.el"
+                 :files (:defaults "*.el" "*.sh")))
+#+end_src
+
+*** Local
+#+begin_src elisp
+(use-package eee
+  :load-path "<local path to eee.el project directory>")
+#+end_src
+
+** Configuration
+
+*** Example
+
+#+begin_src elisp
+(use-package eee
+  :load-path "~/Projects/github.com/eval-exec/eee.el/"
+  :config
+  
+  ;; Should have wezterm or alacritty installed, more terminal application is supporting...
+;; Issues and pull requests are welcome
+  (setq ee-terminal-command "wezterm")
+
+  (global-definer "f" 'ee-find)
+  (global-definer "g" 'ee-lazygit)
+  (global-definer "y" 'ee-yazi-project)
+  (general-def "C-x C-f" 'ee-yazi)
+  (general-def "C-S-f" 'ee-rg)
+  (general-evil-define-key 'normal 'global "M-f" 'ee-line)
+  )
 #+end_src
    
 
