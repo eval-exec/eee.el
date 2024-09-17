@@ -139,7 +139,7 @@ NAME is passed to `ee-start-terminal-function'."
 	 (target-file (string-trim target-file)))
     (when (not (string-empty-p target-file))
       (message "ee-yazi opening: %s" target-file)
-      (ee-find-file target-file))))q
+      (ee-find-file target-file))))
 
 ;; Eval Exec 鸭子 yazi https://github.com/sxyazi/yazi in current dir
 (defun ee-yazi-in (dir)
