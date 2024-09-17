@@ -60,15 +60,15 @@ See `ee-start-terminal-function' for the usage.
      proc
      (lambda (p _m)
        (unless (process-live-p p)
-	 (funcall callback p))))
+	       (funcall callback p))))
     proc))
 
 (defcustom ee-start-terminal-function #'ee-start-external-terminal
   "Function used to start the terminal.
 See `ee-start-external-terminal' for function signature."
   :type '(choice (const :tag "External terminal" ee-start-external-terminal)
-		 (const :tag "Eat" ee-eat-start-terminal)
-		 (function "Custom function")))
+		             (const :tag "Eat" ee-eat-start-terminal)
+		             (function "Custom function")))
 
 (defun ee-start-process-shell-command-in-terminal (name command callback)
   "Run COMMAND in a terminal.
@@ -86,17 +86,18 @@ NAME is passed to `ee-start-terminal-function'."
   (when (not (string-empty-p target-file))
     (find-file (string-trim target-file))))
 
+(defun ee--normalize-path (path)
+  (string-trim-right path (rx (or "\n" "\\" "/"))))
 
 (defun ee-get-project-dir-or-current-dir()
-  (let* ((project-dir-command
-		  (format  "git rev-parse --show-toplevel 2> /dev/null || echo -n %s" default-directory))
-		 (cwd (string-trim-right (shell-command-to-string project-dir-command) "\n")))
-	cwd))
-
+  (let ((project-dir-command
+		     (format  "git rev-parse --show-toplevel 2> /dev/null || echo -n %s"
+                  default-directory)))
+    (ee--normalize-path (shell-command-to-string project-dir-command))))
 
 (defun ee-find--callback (process)
   (let* ((target-file (shell-command-to-string "cat /tmp/ee-find.tmp"))
-	 (target-file (string-trim target-file)))
+	       (target-file (string-trim target-file)))
     (when (not (string-empty-p target-file))
       (message "ee-find opening: %s" target-file)
       (ee-find-file target-file))))
@@ -142,9 +143,9 @@ NAME is passed to `ee-start-terminal-function'."
       (ee-find-file target-file))))
 
 ;; Eval Exec 鸭子 yazi https://github.com/sxyazi/yazi in current dir
-(defun ee-yazi-in (dir)
-  (let* ((command (ee-script-path "eee-yazi.sh"))
-	 (full-command (format "cd %s && %s" dir command)))
+(defun ee-yazi-open (path)
+  (let* ((yazi (ee-script-path "eee-yazi.sh"))
+	       (full-command (concat yazi " " path)))
     (ee-start-process-shell-command-in-terminal
      "ee-yazi" full-command #'ee-yazi--callback)))
 
@@ -152,12 +153,18 @@ NAME is passed to `ee-start-terminal-function'."
 ;; Eval Exec 鸭子 yazi in current dir
 (defun ee-yazi()
   (interactive)
-  (ee-yazi-in default-directory))
+  (if buffer-file-name
+      (ee-yazi-open buffer-file-name)
+    (ee-yazi-open default-directory)))
 
 ;; Eval Exec 鸭子 yazi in current project dir
 (defun ee-yazi-project()
   (interactive)
-  (ee-yazi-in (ee-get-project-dir-or-current-dir)))
+  (let ((project-directory (ee-get-project-dir-or-current-dir)))
+    (if (and (equal (ee--normalize-path default-directory) project-directory)
+             buffer-file-name)
+        (ee-yazi-open buffer-file-name)
+      (ee-yazi-open project-directory))))
 
 
 (defun ee-find-file-at-line-and-column (string)
