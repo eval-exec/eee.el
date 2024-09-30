@@ -1,9 +1,9 @@
 ;;; package --- Summary -*- lexical-binding: t -*-
 ;; eee.el is the meaning of Eval! Exec! Enhance!
-;; 
+;;
 ;; Author Github: https://github.com/eval-exec
 ;; Author Blog:   https://evex.one
-;; 
+;;
 ;; Eval! Exec! Enhance!
 ;; Eval! Exec! Excited!
 ;; Eval! Exec! Enjoy!
@@ -86,13 +86,14 @@ NAME is passed to `ee-start-terminal-function'."
 
 (defun ee-find-file (target-file)
   (message "ee-find-file: %s" target-file)
-  (when (not (string-empty-p target-file))
-    (if (not current-prefix-arg)
-        (find-file (string-trim target-file))
-      (let ((action-fn
-             (alist-get (completing-read "Action:" ee-find-file--actions)
-                        ee-find-file--actions nil nil 'equal)))
-        (funcall action-fn target-file)))))
+  (let* ((default-directory (ee-get-project-dir-or-current-dir)))
+    (when (not (string-empty-p target-file))
+      (if (not current-prefix-arg)
+          (find-file (string-trim target-file))
+        (let ((action-fn
+               (alist-get (completing-read "Action:" ee-find-file--actions)
+                          ee-find-file--actions nil nil 'equal)))
+          (funcall action-fn target-file))))))
 
 (defun ee--normalize-path (path)
   (string-trim-right path (rx (or "\n" "\\" "/"))))
