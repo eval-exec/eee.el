@@ -17,4 +17,4 @@ fzf --ansi --disabled --query "$INITIAL_QUERY" \
 	--delimiter : \
 	--preview "bat --color=always ${QUERY_FILE} --highlight-line {1}" \
 	--preview-window 'up,60%,border-bottom,+{1}+3/3,~3' \
-	--layout=reverse-list | xargs -0 -I{} echo "${QUERY_FILE}":{}  > /tmp/ee-line.tmp
+	--layout=reverse-list | xargs -0 -I{} echo "${QUERY_FILE}":{}

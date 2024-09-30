@@ -50,24 +50,24 @@ The terminal emulator is specified in `ee-terminal-command'.
 See `ee-start-terminal-function' for the usage.
 "
   (let* ((options (ee-get-terminal-options))
-	       (full-command (format "%s %s -e bash -c %s"
-			                         ee-terminal-command
-			                         options
-			                         (shell-quote-argument command)))
-	       (proc (start-process-shell-command name nil full-command)))
+	     (full-command (format "%s %s -e bash -c %s"
+			                   ee-terminal-command
+			                   options
+			                   (shell-quote-argument command)))
+	     (proc (start-process-shell-command name nil full-command)))
     (set-process-sentinel
      proc
      (lambda (p _m)
        (unless (process-live-p p)
-	       (funcall callback p))))
+	     (funcall callback p))))
     proc))
 
 (defcustom ee-start-terminal-function #'ee-start-external-terminal
   "Function used to start the terminal.
 See `ee-start-external-terminal' for function signature."
   :type '(choice (const :tag "External terminal" ee-start-external-terminal)
-		             (const :tag "Eat" ee-eat-start-terminal)
-		             (function "Custom function")))
+		         (const :tag "Eat" ee-eat-start-terminal)
+		         (function "Custom function")))
 
 (defun ee-start-process-shell-command-in-terminal (name command callback)
   "Run COMMAND in a terminal.
@@ -84,143 +84,133 @@ NAME is passed to `ee-start-terminal-function'."
   '(("find-file" . find-file)
     ("browse-url" . browse-url)))
 
-(defun ee-find-file (target-file)
-  (message "ee-find-file: %s" target-file)
-  (when (not (string-empty-p target-file))
-    (if (not current-prefix-arg)
-        (find-file (string-trim target-file))
-      (let ((action-fn
-             (alist-get (completing-read "Action:" ee-find-file--actions)
-                        ee-find-file--actions nil nil 'equal)))
-        (funcall action-fn target-file)))))
 
 (defun ee--normalize-path (path)
   (string-trim-right path (rx (or "\n" "\\" "/"))))
 
 (defun ee-get-project-dir-or-current-dir()
   (let ((project-dir-command
-		     (format  "git rev-parse --show-toplevel 2> /dev/null || echo -n %s"
+		 (format  "git rev-parse --show-toplevel 2> /dev/null || echo -n %s"
                   default-directory)))
     (ee--normalize-path (shell-command-to-string project-dir-command))))
 
-(defun ee-find--callback (_process)
-  (let* ((target-file (shell-command-to-string "cat /tmp/ee-find.tmp"))
-	       (target-file (string-trim target-file)))
-    (when (not (string-empty-p target-file))
-      (message "ee-find opening: %s" target-file)
-      (ee-find-file target-file))))
 
 
-;; Eval Exec find file in project or current dir
-(defun ee-find (&optional _arg)
-  (interactive "P")
-  (let* ((working-directory (ee-get-project-dir-or-current-dir))
-	       (command
-	        (format "cd %s && %s > /tmp/ee-find.tmp"
-		              working-directory
-		              (ee-script-path "eee-find.sh"))))
-    (ee-start-process-shell-command-in-terminal "ee-find" command #'ee-find--callback)))
+(defun ee-jump (destination)
+  "Jump to DESTINATION, which can be a file path with optional line and column numbers.
+DESTINATION can be:
+- /path/to/file
+- /path/to/file:12
+- /path/to/file:12:7
+- /path/to/some-pdffile.pdf:Page 123: bala bala bala
+"
+  (interactive "sEnter destination: ")
+  (let* ((components (split-string destination ":"))
+         (file (car components))
+         (line (if (nth 1 components) (string-to-number (nth 1 components)) nil))
+		 ;; pdf-page is the page number in pdf file, like: "Page 123", parse page number to pdf-page
+		 (pdf-page-num (when (nth 1 components)
+						 (when (string-match "Page \\([0-9]+\\)" (nth 1 components))
+						   (string-to-number (match-string 1 (nth 1 components))))))
+         (column (if (nth 2 components) (string-to-number (nth 2 components)) nil)))
+	(when (and (not (string-empty-p file)) (file-exists-p file))
+	  (message "ee-jump get %s; going jump to: file:%s, line:%s, column:%s" destination file line column)
+      (find-file file)
+      (when line
+		(goto-line line)
+		(when column
+          (move-to-column column)
+		  (recenter)))
+	  (when pdf-page-num
+		(pdf-view-goto-page pdf-page-num)))))
+
+;; destination-file is a temporary file, it's content is the desitination we want to jump 
+(defun ee-jump-from(destination-file)
+  (let* ((destination (shell-command-to-string
+					   (format "cat %s" destination-file)))
+		 (destination (string-trim destination)))
+    (ee-jump destination)))
+
+(defun ee-run(name working-directory command &optional args callback)
+  ;; name is the process name, it's needed by `start-process-shell-command's first argument
+  ;; working-directory: after launch teriminal, it will cd to working-directory, then execute commands
+  ;; command: the command to execute, should be a string, like: "yazi", "rg", "git", etc.
+  ;; args: optional, should be list of string,  the arguments for the command. like: '("arg1" "arg2" "arg3")'
+  ;; callback, optional, the callback function to call after the command is executed, it will accept ee-process-output-file as argument
+  (let* (
+		 ;; pre-define ee-* commands' output file, callback function will read content from the file
+		 (ee-process-stdout-file (format "/tmp/ee-stdout-%s.tmp" name))
+		 ;; construct command and args to execute in terminal:
+		 (command-and-args (format "%s %s" command (string-join args " ")))
+		 ;; example:
+		 ;; cd [working-directory] && [command-and-args] > [/tmp/ee-output-ee-rg.tmp]
+		 (full-command (format "cd %s && %s > %s"
+							   working-directory
+							   command-and-args
+							   ee-process-stdout-file))
+		 (process-callback (if callback
+							   (lambda(process)
+								 (funcall callback ee-process-stdout-file))
+							 #'ignore)))
+	(ee-start-process-shell-command-in-terminal
+	 name
+	 full-command
+	 process-callback)))
+
+(defmacro ee-define (name working-directory script-path &optional args callback)
+  "Define a command with NAME to run a script with EE-RUN.
+WORKING-DIRECTORY determines the directory to run the script from.
+SCRIPT-PATH is the full path to the script to run.
+ARGS are optional arguments for the script.
+CALLBACK is an optional callback to be called after the script runs."
+  `(defun ,(intern name) (&optional _arg)
+     (interactive "P")
+     (ee-run ,name
+             ,working-directory
+             ,script-path
+             ,args
+             ',callback)))
 
 
-(defun ee-lf--callback (_process)
-  (let* ((target-file (shell-command-to-string "cat /tmp/ee-lf.tmp"))
-         (target-file (string-split target-file "\n" t)))
-    (dolist (file target-file)
-      (when (not (string-empty-p file))
-        (message "ee-lf-opening: %s" file)
-        (ee-find-file file)))))
+;;;;;; define ee commands here: ee-rg, ee-line, ee-yazi, etc. ;;;;;;;;;;;
 
-(defun ee-lf-in (dir)
-  (let* ((command (ee-script-path "eee-lf.sh"))
-         (full-command (format "cd %s && %s" dir command)))
-    (ee-start-process-shell-command-in-terminal
-     "ee-lf" full-command #'ee-lf--callback)))
+;; Define your commands using the macro
+(ee-define "ee-line" default-directory (ee-script-path "eee-line.sh")
+           (list buffer-file-name) ee-jump-from)
 
-(defun ee-lf (&optional _arg)
-  (interactive "P")
-  (ee-lf-in default-directory))
+(ee-define "ee-find" (ee-get-project-dir-or-current-dir) (ee-script-path "eee-find.sh") nil ee-jump-from)
 
-(defun ee-lf-project (&optinoal _arg)
-  (interactive "P")
-  (ee-lf-in (ee-get-project-dir-or-current-dir)))
+(ee-define "ee-lazygit" default-directory (ee-script-path "eee-lazygit.sh") nil ignore)
 
-(defun ee-yazi--callback (_process)
-  (let* ((target-file (shell-command-to-string "cat /tmp/ee-yazi.tmp"))
-	       (target-file (string-trim target-file)))
-    (when (not (string-empty-p target-file))
-      (message "ee-yazi opening: %s" target-file)
-      (ee-find-file target-file))))
+(ee-define "ee-rg" default-directory (ee-script-path "eee-rg.sh") nil ee-jump-from)
 
-;; Eval Exec 鸭子 yazi https://github.com/sxyazi/yazi in current dir
-(defun ee-yazi-open (path)
-  (let* ((yazi (ee-script-path "eee-yazi.sh"))
-	       (full-command (concat yazi " " path)))
-    (ee-start-process-shell-command-in-terminal
-     "ee-yazi" full-command #'ee-yazi--callback)))
+(ee-define "ee-rga" default-directory (ee-script-path "eee-rga.sh") (list buffer-file-name) ee-jump-from)
 
+(ee-define "ee-lf" default-directory (ee-script-path "eee-lf.sh") nil ee-jump-from)
 
-;; Eval Exec 鸭子 yazi in current dir
-(defun ee-yazi (&optional _arg)
-  (interactive "P")
-  (if buffer-file-name
-      (ee-yazi-open buffer-file-name)
-    (ee-yazi-open default-directory)))
+(ee-define "ee-lf-project" (ee-get-project-dir-or-current-dir) (ee-script-path "eee-lf.sh") nil ee-jump-from)
 
-;; Eval Exec 鸭子 yazi in current project dir
-(defun ee-yazi-project (&optional _arg)
-  (interactive "P")
-  (let ((project-directory (ee-get-project-dir-or-current-dir)))
-    (if (and (equal (ee--normalize-path default-directory) project-directory)
-             buffer-file-name)
-        (ee-yazi-open buffer-file-name)
-      (ee-yazi-open project-directory))))
+;; ";" is important commmand should be "htop;" since, ee-run will redirect stdout to ee-process-output-file
+;; if command is "htop", ee-run will redirect htop's stdout to ee-process-output-file,
+;; then you will see nothing in launched teriminal
+(ee-define "ee-htop" default-directory "htop;" nil ignore)
+
+;; Commands with optional arguments
+(ee-define "ee-yazi" default-directory (ee-script-path "eee-yazi.sh") (list buffer-file-name) ee-jump-from)
+
+(ee-define "ee-yazi-project"
+           (ee-get-project-dir-or-current-dir)
+           (ee-script-path "eee-yazi.sh")
+		   (if
+			   (and
+				(equal
+				 (ee--normalize-path default-directory)
+				 (ee-get-project-dir-or-current-dir))
+				buffer-file-name)
+			   (list buffer-file-name)
+			 (list (ee-get-project-dir-or-current-dir)))
+		   ee-jump-from)
 
 
-(defun ee-find-file-at-line-and-column (string)
-  (when (string-match "\\(.*?\\):\\([0-9]+\\):\\([0-9]+\\):" string)
-	(let ((file (match-string 1 string))
-		  (line (string-to-number (match-string 2 string)))
-		  (column (string-to-number (match-string 3 string))))
-	  (message "ee-find file: %s line: %s column: %s" file line column)
-	  (ee-find-file file)
-	  (goto-line line)
-	  (move-to-column (1- column))
-	  (recenter))))
-
-(defun ee-rg--callback (process)
-  (let* ((ee-rg-result (shell-command-to-string "cat /tmp/ee-rg.tmp")))
-    (message "ee-rg get: %s" ee-rg-result)
-    (ee-find-file-at-line-and-column ee-rg-result)))
-
-(defun ee-rg ()
-  (interactive)
-  (let* ((working-directory (ee-get-project-dir-or-current-dir))
-	       (command (format "cd %s && %s > /tmp/ee-rg.tmp"
-			                    working-directory
-			                    (ee-script-path "eee-rg.sh"))))
-    (ee-start-process-shell-command-in-terminal
-     "ee-rg" command #'ee-rg--callback)))
-
-
-;;; Eval Exec execute lazygit
-(defun ee-lazygit()
-  (interactive)
-  (let* ((command  (ee-script-path "eee-lazygit.sh")))
-    (ee-start-process-shell-command-in-terminal "ee-lazygit" command #'ignore)))
-
-(defun ee-line--callback(process)
-  (let* ((target-file (shell-command-to-string "cat /tmp/ee-line.tmp"))
-	 (target-file (string-trim target-file)))
-    (when (not (string-empty-p target-file))
-      (message "ee-line opening: %s" target-file)
-      (ee-find-file-at-line-and-column target-file))))
-
-;;; Eval Exec search line
-(defun ee-line ()
-  (interactive)
-  (let* ((command
-	        (format "%s %s" (ee-script-path "eee-line.sh")
-		              (buffer-file-name))))
-    (ee-start-process-shell-command-in-terminal "ee-line" command #'ee-line--callback)))
 
 (provide 'eee)
