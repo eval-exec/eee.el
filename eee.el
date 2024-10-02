@@ -29,6 +29,17 @@
   :type 'alist
   :group 'eee)
 
+;; enable ee-function's debug message?
+(defcustom ee-debug-message nil
+  "if t, then eee.el will print debug message to message buffer"
+  :type 'boolean
+  :group 'eee)
+
+(defun ee-message (format-string &rest args)
+  "Call `message` with FORMAT-STRING and ARGS if `ee-debug-message` is non-nil."
+  (when ee-debug-message
+    (apply 'message format-string args)))
+
 
 (defun ee-get-terminal-options()
   (alist-get
@@ -50,11 +61,13 @@ The terminal emulator is specified in `ee-terminal-command'.
 See `ee-start-terminal-function' for the usage.
 "
   (let* ((options (ee-get-terminal-options))
-	     (full-command (format "%s %s -e bash -c %s"
+	     (full-command (format "%s %s -e bash -c '%s'"
 			                   ee-terminal-command
 			                   options
-			                   (shell-quote-argument command)))
-	     (proc (start-process-shell-command name nil full-command)))
+							   command))
+	     (proc (progn
+				 (ee-message "ee-executing:\n%s" full-command)
+				 (start-process-shell-command name nil full-command) )))
     (set-process-sentinel
      proc
      (lambda (p _m)
@@ -160,8 +173,7 @@ DESTINATION can be:
 		 (ee-process-stdout-file (format "/tmp/ee-stdout-%s.tmp" name))
 		 ;; construct command and args to execute in terminal:
 		 (command-and-args
-		  (format "%s %s"
-				  (shell-quote-argument command)
+		  (format "%s %s" command
 				  (ee-join-args args)))
 		 ;; example:
 		 ;; cd [working-directory] && [command-and-args] > [/tmp/ee-output-ee-rg.tmp]
@@ -173,7 +185,7 @@ DESTINATION can be:
 							   (lambda(process)
 								 (funcall callback ee-process-stdout-file))
 							 #'ignore)))
-	(message "%s: %s" name full-command)
+	(ee-message "%s: %s" name full-command)
 	(ee-start-process-shell-command-in-terminal
 	 name
 	 full-command
@@ -220,6 +232,7 @@ CALLBACK is an optional callback to be called after the script runs."
 ;; if command is "htop", ee-run will redirect htop's stdout to ee-process-output-file,
 ;; then you will see nothing in launched teriminal
 (ee-define "ee-htop" default-directory "htop;" nil ignore)
+(ee-define "ee-btop" default-directory "btop;" nil ignore)
 
 ;; Commands with optional arguments
 (ee-define "ee-yazi" default-directory (ee-script-path "eee-yazi.sh") (list buffer-file-name) ee-jump-from)
@@ -237,6 +250,12 @@ CALLBACK is an optional callback to be called after the script runs."
 			 (list (ee-get-project-dir-or-current-dir)))
 		   ee-jump-from)
 
-
+;; use delta to show git diff
+(ee-define "ee-delta"
+		   (ee-get-project-dir-or-current-dir)
+		   "git -c core.diff=delta -c delta.pager=less -c delta.paging=always diff ; echo fjeio "
+		   nil
+		   ignore
+		   )
 
 (provide 'eee)

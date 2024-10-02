@@ -5,9 +5,13 @@ eee.el launches excellent terminal user interface tools (such as yazi, fzf, lazy
 ee.el Support:
 1. [[https://github.com/sxyazi/yazi/][yazi]] : launch yazi from Emacs asynchronously, then yazi tell emacs which file to open
 2. [[https://github.com/BurntSushi/ripgrep/][ripgrep]] : launch ripgrep + fzf from Emacs asynchronous, then ripgrep tell emacs jump to which file and position
-3. [[https://github.com/junegunn/fzf/][fzf]] : combined with ripgrep
-4. [[https://github.com/jesseduffield/lazygit][lazygit]] : launch lazygit from Emacs asynchronously
-5. more tui tools and options will be enhanced and provided.
+3. [[https://github.com/junegunn/fzf/][fzf]] : combined with  =ripgrep= 
+4. [[https://github.com/jesseduffield/lazygit][lazygit]] : launch =lazygit= from Emacs asynchronously
+5. ripgrep-all: search pdf files by =ee-rga=
+6. delta: show git delta  by  =ee-delta= 
+7. htop: launch htop by  =ee-htop= 
+7. btop: launch btop by  =ee-btop= 
+... more tui tools and options will be enhanced and provided.
 
 
 [[https://github.com/user-attachments/assets/9298b2be-1ccb-4696-8569-672fac660f22][preview]]
