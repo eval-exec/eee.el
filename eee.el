@@ -143,7 +143,9 @@ DESTINATION can be:
 
 (defun ee-join-args(args)
   (string-join
-   (mapcar #'shell-quote-argument args) " "))
+   (mapcar (lambda(str)
+			 (if str (shell-quote-argument str) ""))
+		   args) " "))
 
 (defun ee-run(name working-directory command &optional args callback)
   ;; name is the process name, it's needed by `start-process-shell-command's first argument
