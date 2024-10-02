@@ -95,6 +95,9 @@ NAME is passed to `ee-start-terminal-function'."
     (ee--normalize-path (shell-command-to-string project-dir-command))))
 
 
+(defun ee-integer-p(str)
+  (when str
+	(string-match-p "^[-+]?[0-9]+$" str)))
 
 (defun ee-jump (destination)
   "Jump to DESTINATION, which can be a file path with optional line and column numbers.
@@ -107,14 +110,20 @@ DESTINATION can be:
   (interactive "sEnter destination: ")
   (let* ((components (split-string destination ":"))
          (file (car components))
-         (line (if (nth 1 components) (string-to-number (nth 1 components)) nil))
+         (line (if (and (length> components 1)
+						(ee-integer-p (nth 1 components)))
+				   (string-to-number (nth 1 components)) nil))
 		 ;; pdf-page is the page number in pdf file, like: "Page 123", parse page number to pdf-page
-		 (pdf-page-num (when (nth 1 components)
-						 (when (string-match "Page \\([0-9]+\\)" (nth 1 components))
-						   (string-to-number (match-string 1 (nth 1 components))))))
-         (column (if (nth 2 components) (string-to-number (nth 2 components)) nil)))
+		 (pdf-page-num 
+		  (when (and
+				 (length> components 1)
+				 (string-match "Page \\([0-9]+\\)" (nth 1 components)))
+			(string-to-number (match-string 1 (nth 1 components)))))
+
+         (column (if (and (length> components 2) (ee-integer-p (nth 2 components)))
+					 (string-to-number (nth 2 components)) nil)))
 	(when (and (not (string-empty-p file)) (file-exists-p file))
-	  (message "ee-jump get %s; going jump to: file:%s, line:%s, column:%s" destination file line column)
+	  (message "ee-jump get %s; going jump to: file:%s, [line:%s/page:%s], column:%s" destination file line pdf-page-num column)
       (find-file file)
       (when line
 		(goto-line line)
@@ -129,7 +138,12 @@ DESTINATION can be:
   (let* ((destination (shell-command-to-string
 					   (format "cat %s" destination-file)))
 		 (destination (string-trim destination)))
-    (ee-jump destination)))
+	(unless (string-empty-p destination)
+      (ee-jump destination))))
+
+(defun ee-join-args(args)
+  (string-join
+   (mapcar #'shell-quote-argument args) " "))
 
 (defun ee-run(name working-directory command &optional args callback)
   ;; name is the process name, it's needed by `start-process-shell-command's first argument
@@ -137,11 +151,16 @@ DESTINATION can be:
   ;; command: the command to execute, should be a string, like: "yazi", "rg", "git", etc.
   ;; args: optional, should be list of string,  the arguments for the command. like: '("arg1" "arg2" "arg3")'
   ;; callback, optional, the callback function to call after the command is executed, it will accept ee-process-output-file as argument
-  (let* (
+  (let* ((working-directory
+		  (shell-quote-argument
+		   (expand-file-name  working-directory)))
 		 ;; pre-define ee-* commands' output file, callback function will read content from the file
 		 (ee-process-stdout-file (format "/tmp/ee-stdout-%s.tmp" name))
 		 ;; construct command and args to execute in terminal:
-		 (command-and-args (format "%s %s" command (string-join args " ")))
+		 (command-and-args
+		  (format "%s %s"
+				  (shell-quote-argument command)
+				  (ee-join-args args)))
 		 ;; example:
 		 ;; cd [working-directory] && [command-and-args] > [/tmp/ee-output-ee-rg.tmp]
 		 (full-command (format "cd %s && %s > %s"
@@ -152,6 +171,7 @@ DESTINATION can be:
 							   (lambda(process)
 								 (funcall callback ee-process-stdout-file))
 							 #'ignore)))
+	(message "%s: %s" name full-command)
 	(ee-start-process-shell-command-in-terminal
 	 name
 	 full-command
@@ -184,7 +204,11 @@ CALLBACK is an optional callback to be called after the script runs."
 
 (ee-define "ee-rg" default-directory (ee-script-path "eee-rg.sh") nil ee-jump-from)
 
-(ee-define "ee-rga" default-directory (ee-script-path "eee-rga.sh") (list buffer-file-name) ee-jump-from)
+(ee-define "ee-rga" default-directory (ee-script-path "eee-rga.sh")
+		   (list
+			(expand-file-name
+			 (or buffer-file-name default-directory)))
+		   ee-jump-from)
 
 (ee-define "ee-lf" default-directory (ee-script-path "eee-lf.sh") nil ee-jump-from)
 

@@ -12,9 +12,9 @@ INITIAL_QUERY=""
 
 fzf --ansi --disabled --query "$INITIAL_QUERY" \
 	--border \
-	--bind "start:reload:$RG_PREFIX {q} ${QUERY_FILE}" \
-	--bind "change:reload:sleep 0.01; $RG_PREFIX {q} ${QUERY_FILE} || true" \
+	--bind "start:reload:$RG_PREFIX {q} '${QUERY_FILE}'" \
+	--bind "change:reload:sleep 0.01; $RG_PREFIX {q} '${QUERY_FILE}' || true" \
 	--delimiter : \
-	--preview "bat --color=always ${QUERY_FILE} --highlight-line {1}" \
+	--preview "bat --color=always '${QUERY_FILE}' --highlight-line {1}" \
 	--preview-window 'up,60%,border-bottom,+{1}+3/3,~3' \
 	--layout=reverse-list | xargs -0 -I{} echo "${QUERY_FILE}":{}
