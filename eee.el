@@ -63,7 +63,7 @@
 ;; "
 ;;   (let* ((options (ee-get-terminal-options))
 ;;           ;; TODO: sleep 1 is a workaround,
-;;           ;; should caught the error message 
+;;           ;; should caught the error message
 ;;           ;; and show it in Emacs's echo area
 ;;           ;; errno 130 is indicates that a command or process was terminated by the user
 ;;           (full-command (format "%s %s -e bash -c '%s || { [ $? -ne 130 ] && sleep 1; }'"
@@ -86,10 +86,10 @@
   (let* ((options (split-string (ee-get-terminal-options)))
          (bash-command (format "%s || { [ $? -ne 130 ] && sleep 1; }" command))
          (args (append options (list "-e" "bash" "-c" bash-command))))
-    (ee-message "ee-executing: %s %s" 
-                ee-terminal-command 
+    (ee-message "ee-executing: %s %s"
+                ee-terminal-command
                 (string-join args " "))
-    (apply #'async-start-process 
+    (apply #'async-start-process
            name
            ee-terminal-command
            callback
@@ -171,7 +171,7 @@ DESTINATION can be:
 
 
       (funcall-interactively #'find-file file)
-      
+
       (redisplay 1)
       (when line
         (goto-line line)
@@ -189,7 +189,7 @@ DESTINATION can be:
 ;; destination-file is a temporary file, it's content is the desitination we want to jump
 (defun ee-jump-from (destination-file)
   (when (file-exists-p destination-file)
-    (let ((destination (string-trim 
+    (let ((destination (string-trim
                          (with-temp-buffer
                            (insert-file-contents destination-file)
                            (buffer-string)))))
