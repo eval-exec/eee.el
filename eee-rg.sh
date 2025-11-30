@@ -27,6 +27,7 @@ function rg_align() {
     done
 
 }
+# RG=~/soft/rg/rg
 
 TRANSFORMER='
   rg_pat={q:1}      # The first word is passed to ripgrep
@@ -35,7 +36,7 @@ TRANSFORMER='
 
   if ! [[ -r "$TEMP" ]] || [[ $rg_pat != $(cat "$TEMP") ]] || [[ $TEMP_FLAGS -nt $TEMP ]]; then
     echo "$rg_pat" > "$TEMP"
-    printf "reload:sleep 0.01; '"$RG"' --hidden --column --line-number --with-filename --no-heading --color=always --smart-case %q -e %q %q  || true" "$flags" "$rg_pat" ${QUERY_PATH}
+    printf "reload:sleep 0.01; '"$RG"' --hidden --no-ignore-dot --column --line-number --with-filename --no-heading --color=always --smart-case %q -e %q %q  || true" "$flags" "$rg_pat" ${QUERY_PATH}
   fi
   echo -n "+search:$fzf_pat"
 '
@@ -65,7 +66,7 @@ function toggle_case_sensitive() {
 export -f toggle_case_sensitive
 
 function read_input_label() {
-    logger "input-label:" input-label
+    logger "input-label:" "$(cat ${TEMP_FLAGS})"
     printf " %s " "$(cat ${TEMP_FLAGS} )"
 }
 
