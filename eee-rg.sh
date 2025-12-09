@@ -49,42 +49,37 @@ TRANSFORMER='
   echo "+search:$fzf_pat"
 '
 
-# if TEMP_FLAGS contains --word-regexp, remove it, else add it
-function toggle_word_rexp() {
-    if grep -q -- ' --word-regexp' "$TEMP_FLAGS"; then
-        sed -i 's/ --word-regexp//g' "$TEMP_FLAGS"
+# Generic function to toggle a flag in TEMP_FLAGS
+function toggle_flag() {
+    local flag="$1"
+    if grep -q -- " --${flag}" "$TEMP_FLAGS"; then
+        sed -i "s/ --${flag}//g" "$TEMP_FLAGS"
     else
-        echo -n " --word-regexp" >>"$TEMP_FLAGS"
+        echo -n " --${flag}" >>"$TEMP_FLAGS"
     fi
     touch "$TEMP_FLAGS"
     logger "Flags: $(cat $TEMP_FLAGS)"
+}
+
+export -f toggle_flag
+
+# Wrapper functions for specific toggles
+function toggle_word_rexp() {
+    toggle_flag "word-regexp"
 }
 
 export -f toggle_word_rexp
 
-# if TEMP_FLAGS contains --case-sensitive, remove it, else add it
 function toggle_case_sensitive() {
-    if grep -q -- ' --case-sensitive' "$TEMP_FLAGS"; then
-        sed -i 's/ --case-sensitive//g' "$TEMP_FLAGS"
-    else
-        echo -n " --case-sensitive" >>"$TEMP_FLAGS"
-    fi
-    touch "$TEMP_FLAGS"
-    logger "Flags: $(cat $TEMP_FLAGS)"
+    toggle_flag "case-sensitive"
 }
 
 export -f toggle_case_sensitive
 
-# toggle --fixed-strings
 function toggle_fixed_strings() {
-    if grep -q -- ' --fixed-strings' "$TEMP_FLAGS"; then
-        sed -i 's/ --fixed-strings//g' "$TEMP_FLAGS"
-    else
-        echo -n " --fixed-strings" >>"$TEMP_FLAGS"
-    fi
-    touch "$TEMP_FLAGS"
-    logger "Flags: $(cat $TEMP_FLAGS)"
+    toggle_flag "fixed-strings"
 }
+
 export -f toggle_fixed_strings
 
 function read_input_label() {
