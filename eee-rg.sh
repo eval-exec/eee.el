@@ -34,6 +34,12 @@ TRANSFORMER='
   fzf_pat={q:2..}
   flags=$(cat ${TEMP_FLAGS})
 
+  # if flags contains --fixed-strings, then set rg_pat to be literal, set fzf_pat to be empty
+  if grep -q -- "--fixed-strings" <<< "$flags"; then
+        rg_pat={q}
+        fzf_pat=""
+  fi
+
   rg_full_pat=${rg_pat}${flags}
   
   if ! [[ -r "$TEMP_RG_PAT" ]] || [[ $rg_full_pat != $(cat "$TEMP_RG_PAT") ]]; then
@@ -45,8 +51,8 @@ TRANSFORMER='
 
 # if TEMP_FLAGS contains --word-regexp, remove it, else add it
 function toggle_word_rexp() {
-    if grep -q -- '--word-regexp' "$TEMP_FLAGS"; then
-        sed -i 's/--word-regexp//g' "$TEMP_FLAGS"
+    if grep -q -- ' --word-regexp' "$TEMP_FLAGS"; then
+        sed -i 's/ --word-regexp//g' "$TEMP_FLAGS"
     else
         echo -n " --word-regexp" >>"$TEMP_FLAGS"
     fi
@@ -58,8 +64,8 @@ export -f toggle_word_rexp
 
 # if TEMP_FLAGS contains --case-sensitive, remove it, else add it
 function toggle_case_sensitive() {
-    if grep -q -- '--case-sensitive' "$TEMP_FLAGS"; then
-        sed -i 's/--case-sensitive//g' "$TEMP_FLAGS"
+    if grep -q -- ' --case-sensitive' "$TEMP_FLAGS"; then
+        sed -i 's/ --case-sensitive//g' "$TEMP_FLAGS"
     else
         echo -n " --case-sensitive" >>"$TEMP_FLAGS"
     fi
@@ -68,6 +74,18 @@ function toggle_case_sensitive() {
 }
 
 export -f toggle_case_sensitive
+
+# toggle --fixed-strings
+function toggle_fixed_strings() {
+    if grep -q -- ' --fixed-strings' "$TEMP_FLAGS"; then
+        sed -i 's/ --fixed-strings//g' "$TEMP_FLAGS"
+    else
+        echo -n " --fixed-strings" >>"$TEMP_FLAGS"
+    fi
+    touch "$TEMP_FLAGS"
+    logger "Flags: $(cat $TEMP_FLAGS)"
+}
+export -f toggle_fixed_strings
 
 function read_input_label() {
     logger "input-label:" "$(cat ${TEMP_FLAGS})"
@@ -94,5 +112,6 @@ $FZF --ansi --disabled --query "$INITIAL_QUERY" \
     --preview-window 'up,70%,+{2}+3/3,~3' \
     --bind "alt-w:execute-silent(toggle_word_rexp)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
     --bind "alt-c:execute-silent(toggle_case_sensitive)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
+    --bind "alt-f:execute-silent(toggle_fixed_strings)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
     --bind 'ctrl-f:page-down,ctrl-b:page-up' |
     xargs -0 -I{} echo $(pwd)/{}
