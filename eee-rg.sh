@@ -27,18 +27,14 @@ function rg_align() {
     done
 
 }
-# RG=~/soft/rg/rg
 
 TRANSFORMER='
   rg_pat={q:1}      # The first word is passed to ripgrep
   fzf_pat={q:2..}   # The rest are passed to fzf
   flags=$(cat ${TEMP_FLAGS})
 
-  if ! [[ -r "$TEMP" ]] || [[ $rg_pat != $(cat "$TEMP") ]] || [[ $TEMP_FLAGS -nt $TEMP ]]; then
-    echo "$rg_pat" > "$TEMP"
-    printf "reload:sleep 0.01; '"$RG"' --hidden --no-ignore-dot --column --line-number --with-filename --no-heading --color=always --smart-case %q -e %q %q  || true" "$flags" "$rg_pat" ${QUERY_PATH}
-  fi
-  echo -n "+search:$fzf_pat"
+  echo -n reload:sleep 0.01\; rg --hidden --no-ignore-dot --column --line-number --with-filename --no-heading --color=always --smart-case "$flags" -e "$rg_pat" "${QUERY_PATH}" \;
+  echo +search:$fzf_pat
 '
 
 # if TEMP_FLAGS contains --word-regexp, remove it, else add it
@@ -48,6 +44,7 @@ function toggle_word_rexp() {
     else
         echo -n " --word-regexp" >>"$TEMP_FLAGS"
     fi
+    touch "$TEMP_FLAGS"
     logger "Flags: $(cat $TEMP_FLAGS)"
 }
 
@@ -60,6 +57,7 @@ function toggle_case_sensitive() {
     else
         echo -n " --case-sensitive" >>"$TEMP_FLAGS"
     fi
+    touch "$TEMP_FLAGS"
     logger "Flags: $(cat $TEMP_FLAGS)"
 }
 
@@ -67,7 +65,7 @@ export -f toggle_case_sensitive
 
 function read_input_label() {
     logger "input-label:" "$(cat ${TEMP_FLAGS})"
-    printf " %s " "$(cat ${TEMP_FLAGS} )"
+    printf " %s " "$(cat ${TEMP_FLAGS})"
 }
 
 export -f read_input_label
