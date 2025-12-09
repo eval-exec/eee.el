@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-export TEMP=$(mktemp -u)
+export TEMP_RG_PAT=$(mktemp -u)
 export TEMP_FLAGS=$(mktemp -u)
-trap 'rm -f "$TEMP"' EXIT
+trap 'rm -f "$TEMP_RG_PAT"' EXIT
 trap 'rm -f "$TEMP_FLAGS"' EXIT
 
 CURR_DIR=$(dirname $(readlink -f $0))
@@ -28,13 +28,19 @@ function rg_align() {
 
 }
 
+
 TRANSFORMER='
-  rg_pat={q:1}      # The first word is passed to ripgrep
-  fzf_pat={q:2..}   # The rest are passed to fzf
+  rg_pat={q:1}
+  fzf_pat={q:2..}
   flags=$(cat ${TEMP_FLAGS})
 
-  echo -n reload:sleep 0.01\; rg --hidden --no-ignore-dot --column --line-number --with-filename --no-heading --color=always --smart-case "$flags" -e "$rg_pat" "${QUERY_PATH}" \;
-  echo +search:$fzf_pat
+  rg_full_pat=${rg_pat}${flags}
+  
+  if ! [[ -r "$TEMP_RG_PAT" ]] || [[ $rg_full_pat != $(cat "$TEMP_RG_PAT") ]]; then
+    echo "$rg_full_pat" > "$TEMP_RG_PAT"
+    printf "reload:sleep 0.01; rg --hidden --no-ignore-dot --column --line-number --with-filename --no-heading --color=always --smart-case %s %q %q || true" "${flags}" "${rg_pat}" "${QUERY_PATH}"
+  fi
+  echo "+search:$fzf_pat"
 '
 
 # if TEMP_FLAGS contains --word-regexp, remove it, else add it
@@ -70,6 +76,7 @@ function read_input_label() {
 
 export -f read_input_label
 
+
 $FZF --ansi --disabled --query "$INITIAL_QUERY" \
     --delimiter : --nth 3.. \
     --border \
@@ -83,12 +90,9 @@ $FZF --ansi --disabled --query "$INITIAL_QUERY" \
     --bind "start:transform:$TRANSFORMER" \
     --bind "change:transform:$TRANSFORMER" \
     --color "hl:-1:underline,hl+:-1:underline:reverse,border:#A15ABD" \
-    --delimiter : \
     --preview "$BAT"' --color=always {1} --highlight-line {2}' \
     --preview-window 'up,70%,+{2}+3/3,~3' \
-    --bind \
-    "alt-w:execute-silent(toggle_word_rexp)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
-    --bind \
-    "alt-c:execute-silent(toggle_case_sensitive)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
+    --bind "alt-w:execute-silent(toggle_word_rexp)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
+    --bind "alt-c:execute-silent(toggle_case_sensitive)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
     --bind 'ctrl-f:page-down,ctrl-b:page-up' |
     xargs -0 -I{} echo $(pwd)/{}
