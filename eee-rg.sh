@@ -107,6 +107,7 @@ $FZF --ansi --disabled --query "$INITIAL_QUERY" \
     --preview-window 'up,70%,+{2}+3/3,~3' \
     --bind "alt-w:execute-silent(toggle_word_rexp)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
     --bind "alt-c:execute-silent(toggle_case_sensitive)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
+    --bind "alt-f:execute-silent(toggle_fixed_strings)+transform-list-label(read_input_label)+transform:${TRANSFORMER}" \
       --footer $'\x1b[33mAlt-w\x1b[0m: toggle-word-regex  \x1b[33mAlt-c\x1b[0m: toggle-case  \x1b[33mAlt-f\x1b[0m: toggle-fixed-strings' \
     --bind 'ctrl-f:page-down,ctrl-b:page-up' |
     xargs -0 -I{} echo $(pwd)/{}
