@@ -25,6 +25,8 @@
      ("kitty" . "--title ee-kitty")
      ("konsole" . "--hide-menubar")
      ("ghostty" . "--title=ee-ghostty --window-decoration=none")
+     ("foot" . "--title=ee-foot")
+     ("footclient" . "--title=ee-footclient")
      )
   "The terminal command options to use for ee-* commands."
   :type 'alist
