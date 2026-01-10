@@ -299,6 +299,7 @@ CALLBACK is an optional callback to be called after the script runs."
 ;;;###autoload
 (ee-define "ee-htop" default-directory "htop;" nil ignore)
 (ee-define "ee-btop" default-directory "btop;" nil ignore)
+(ee-define "ee-btm" default-directory "btm -b --hide_avg_cpu;" nil ignore)
 
 ;; Commands with optional arguments
 ;;;###autoload
